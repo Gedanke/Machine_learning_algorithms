@@ -2,6 +2,8 @@
 
 import csv
 import math
+import numpy
+import pandas
 import random
 
 
@@ -140,7 +142,18 @@ class NaiveBayes(object):
 
 
 if __name__ == '__main__':
-    file_path = 'pima-indians-diabetes.data.csv'
-    rate_ = 0.67
+    file_path = "pima-indians-diabetes.data.csv"
+    list_names = ["怀孕次数", "口服葡萄糖耐量试验中血浆葡萄糖浓度", \
+                  "舒张压(mm Hg)", "三头肌组织褶厚度(mm)", \
+                  "2小时血清胰岛素(μU/ ml)", "体重指数(kg/(身高(m))^ 2)", \
+                  "糖尿病系统功能", "年龄(岁)", "是否患有糖尿病"]
+    data = pandas.read_csv(file_path, header=None, names=list_names)
+    lists = len(data.iloc[0])
+    '''有0的地方转NaN'''
+    data.iloc[:, 0:lists - 1] = data.iloc[:, 0:lists - 1].applymap(lambda x: numpy.NaN if x == 0 else x)
+    '''去除有缺失值的行'''
+    data = data.dropna(how="any")
+    data.to_csv(file_path, header=None)
+    rate_ = 0.8
     naiveBayes = NaiveBayes(file_path, rate_)
     print("Result: {0}%".format(naiveBayes.get_result() * 100))
