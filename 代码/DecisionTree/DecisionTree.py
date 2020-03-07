@@ -72,7 +72,6 @@ class DecisionTree(object):
         """
         results = dict()
         for row in data:
-            # ?
             r = row[len(row) - 1]
             if r not in results:
                 results[r] = 0
@@ -110,14 +109,15 @@ class DecisionTree(object):
         set2 = [row for row in data if not split_function(row)]
         return set1, set2
 
-    def build_tree(self, data):
+    def build_tree(self, data, function):
         """
         :param data:
+        :param function:
         :return:
         """
         if len(data) == 0:
             return DecisionNode()
-        current_score = self.entropy(data)
+        current_score = function(data)
 
         '''定义一些变量以记录最佳拆分条件'''
         best_gain = 0.0
@@ -134,7 +134,7 @@ class DecisionTree(object):
 
                 '''信息增益'''
                 p = float(len(set1)) / len(data)
-                gain = current_score - p * self.entropy(set1) - (1 - p) * self.entropy(set2)
+                gain = current_score - p * function(set1) - (1 - p) * function(set2)
                 if gain > best_gain and len(set1) > 0 and len(set2) > 0:
                     best_gain = gain
                     best_criteria = (col, value)
@@ -142,8 +142,8 @@ class DecisionTree(object):
 
         '''创建子分支'''
         if best_gain > 0:
-            true_branch = self.build_tree(best_sets[0])
-            false_branch = self.build_tree(best_sets[1])
+            true_branch = self.build_tree(best_sets[0], function)
+            false_branch = self.build_tree(best_sets[1], function)
             return DecisionNode(col=best_criteria[0], value=best_criteria[1],
                                 tb=true_branch, fb=false_branch)
         else:
@@ -197,12 +197,16 @@ class DecisionTree(object):
                     branch = tree.fb
             return self.classify(sample, branch)
 
-    def get_result(self):
+    def get_result(self, args):
         """
+        :param args: 参数列表 第一个为函数名
         :return: 正确率
         """
         correct = 0
-        self.tree = self.build_tree(self.train_data)
+        self.tree = self.build_tree(self.train_data, args[0])
+        '''剪枝'''
+        if len(args) > 1:
+            self.pruning(args[1])
         len_test_data = len(self.test_data)
         for index in range(len_test_data):
             sample_label = self.classify(self.test_data[index], self.tree)
@@ -212,12 +216,68 @@ class DecisionTree(object):
                 correct += 1
         return correct / len_test_data
 
+    def gain_impurity(self, data):
+        """
+        :param data:
+        :return:
+        基尼不纯度
+        随机放置的数据项出现于错误分类中的概率
+        """
+        total = len(data)
+        counts = self.unique_counts(data)
+        imp = 0
+        for k in counts.keys():
+            p1 = float(counts[k]) / total
+            imp += p1 * (1 - p1)
+        return imp
+
+    def pruning_(self, tree, impurity):
+        """
+        :param tree:
+        :param impurity:
+        :return:
+        剪枝
+        """
+        '''如果分支不是叶节点,则对其进行剪枝'''
+        if tree.tb.results is None:
+            self.pruning_(tree.tb, impurity)
+        if tree.fb.results is None:
+            self.pruning_(tree.fb, impurity)
+        '''如果两个子分支都是叶节点,判断是否能够合并'''
+        if tree.tb.results is not None and tree.fb.results is not None:
+            '''构造合并后的数据集'''
+            tb = list()
+            fb = list()
+            for v, c in tree.tb.results.items():
+                tb += [[v]] * c
+            for v, c in tree.fb.results.items():
+                fb += [[v]] * c
+            '''检查熵的减少量'''
+            decrease = self.entropy(tb + fb) - (self.entropy(tb) + self.entropy(fb) / 2)
+            if decrease < impurity:
+                '''合并分支'''
+                tree.tb = None
+                tree.fb = None
+                tree.results = self.unique_counts(tb + fb)
+
+    def pruning(self, impurity):
+        """
+        :param impurity:
+        :return:
+        """
+        self.pruning_(self.tree, impurity)
+
 
 if __name__ == "__main__":
     path_train_ = "train.csv"
     path_test_ = "test.csv"
     decisionTree = DecisionTree(path_train_, path_test_)
-    result = decisionTree.get_result()
+    '''指定参数'''
+    result = decisionTree.get_result([decisionTree.entropy])
     '''打印树'''
     decisionTree.print_tree()
     print("\n" + str(result))
+    '''剪枝'''
+    # 剪枝效果不佳,待改进
+    result_ = decisionTree.get_result([decisionTree.gain_impurity, 0.5])
+    decisionTree.print_tree()
