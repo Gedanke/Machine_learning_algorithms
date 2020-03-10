@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import csv
 import math
+import csv
 
 
 def is_number(num):
@@ -43,18 +43,23 @@ class DecisionTree(object):
         列表中的数据均为str类型
         使用is_number可以判断一个字符串是否为数值型
         """
+        '''训练集'''
         self.train_data = list(csv.reader(open(path_train, "r", encoding="UTF-8-sig")))
-        '''去除第一行'''
+        '''去除第一行(列名)'''
         self.train_data.pop(0)
+        '''测试集'''
         self.test_data = list(csv.reader(open(path_test, "r", encoding="UTF-8-sig")))
-        '''去除第一行'''
+        '''去除第一行(列名)'''
         self.test_data.pop(0)
+        '''构成出的树'''
         self.tree = None
         '''测试集行数'''
         self.rows = len(self.train_data)
         '''样本特征个数'''
         self.lists = len(self.train_data[0])
+        '''测试集标签集'''
         self.test_label = list()
+        '''预测得到的标签集'''
         self.result_label = list()
         self.init_data()
 
@@ -62,6 +67,19 @@ class DecisionTree(object):
         """
         :return:
         """
+        '''数值化为数值的字符串'''
+        '''训练集'''
+        for i in range(len(self.train_data)):
+            for j in range(len(self.train_data[i])):
+                '''数字'''
+                if is_number(self.train_data[i][j]):
+                    self.train_data[i][j] = float(self.train_data[i][j])
+        '''测试集'''
+        for i in range(len(self.test_data)):
+            for j in range(len(self.test_data[i])):
+                if is_number(self.test_data[i][j]):
+                    self.test_data[i][j] = float(self.test_data[i][j])
+        '''拆分测试集'''
         for line in self.test_data:
             self.test_label.append(line.pop(self.lists - 1))
 
@@ -197,25 +215,6 @@ class DecisionTree(object):
                     branch = tree.fb
             return self.classify(sample, branch)
 
-    def get_result(self, args):
-        """
-        :param args: 参数列表 第一个为函数名
-        :return: 正确率
-        """
-        correct = 0
-        self.tree = self.build_tree(self.train_data, args[0])
-        '''剪枝'''
-        if len(args) > 1:
-            self.pruning(args[1])
-        len_test_data = len(self.test_data)
-        for index in range(len_test_data):
-            sample_label = self.classify(self.test_data[index], self.tree)
-            sample_label = list(sample_label)[0]
-            self.result_label.append(sample_label)
-            if sample_label == self.test_label[index]:
-                correct += 1
-        return correct / len_test_data
-
     def gain_impurity(self, data):
         """
         :param data:
@@ -267,6 +266,25 @@ class DecisionTree(object):
         """
         self.pruning_(self.tree, impurity)
 
+    def get_result(self, args):
+        """
+        :param args: 参数列表 第一个为函数名
+        :return: 正确率
+        """
+        correct = 0
+        self.tree = self.build_tree(self.train_data, args[0])
+        '''剪枝'''
+        if len(args) > 1:
+            self.pruning(args[1])
+        len_test_data = len(self.test_data)
+        for index in range(len_test_data):
+            sample_label = self.classify(self.test_data[index], self.tree)
+            sample_label = list(sample_label)[0]
+            self.result_label.append(sample_label)
+            if sample_label == self.test_label[index]:
+                correct += 1
+        return correct / len_test_data
+
 
 if __name__ == "__main__":
     path_train_ = "train.csv"
@@ -276,8 +294,8 @@ if __name__ == "__main__":
     result = decisionTree.get_result([decisionTree.entropy])
     '''打印树'''
     decisionTree.print_tree()
-    print("\n" + str(result))
+    print("\n" + str(result) + "\n")
     '''剪枝'''
     # 剪枝效果不佳,待改进
-    result_ = decisionTree.get_result([decisionTree.gain_impurity, 0.5])
+    result_ = decisionTree.get_result([decisionTree.gain_impurity, 0.1])
     decisionTree.print_tree()
