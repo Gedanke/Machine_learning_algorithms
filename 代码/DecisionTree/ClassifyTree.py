@@ -214,7 +214,7 @@ class ClassifyTree(object):
         labels_tmp = self.attributes[:]
         decision_tree = self.create_tree(data_set, labels_tmp)
         print("decisionTree:\n", decision_tree)
-        treePlotter.createPlot(decision_tree)
+        treePlotter.create_plot(decision_tree)
         result = self.classify_all(decision_tree)
         print("result:\n", result)
 
