@@ -147,7 +147,7 @@ class ClassifyTree(object):
         :return: 决策树
         """
         class_list = [example[-1] for example in data_set]
-        if class_list.count(class_list[0]) == len(data_set):
+        if class_list.count(class_list[0]) == len(class_list):
             '''类别完全相同,停止划分'''
             return class_list[0]
         if len(data_set[0]) == 1:
@@ -195,8 +195,15 @@ class ClassifyTree(object):
         :param tree: 决策树
         :return: 决策结果
         """
+        correct = 0
+        index = 0
         for test_vec in self.test_data:
-            self.result_label.append(self.classify(tree, self.attributes, test_vec))
+            result = self.classify(tree, self.attributes, test_vec)
+            self.result_label.append(result)
+            if self.test_label[index] == self.result_label[index]:
+                correct += 1
+            index += 1
+        return correct / len(self.test_label)
 
     def get_result(self):
         """
@@ -208,8 +215,8 @@ class ClassifyTree(object):
         decision_tree = self.create_tree(data_set, labels_tmp)
         print("decisionTree:\n", decision_tree)
         treePlotter.createPlot(decision_tree)
-        print("classifyResult:\n")
-        print([label for label in self.result_label])
+        result = self.classify_all(decision_tree)
+        print("result:\n", result)
 
 
 if __name__ == "__main__":
